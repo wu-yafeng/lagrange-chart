@@ -21,9 +21,6 @@ env:
 
 # Lagrange.OneBot 配置
 config:
-  # 是否创建默认配置文件
-  createDefault: true
-  
   # 访问令牌配置
   accessToken:
     # 是否自动生成随机 token
@@ -50,9 +47,8 @@ config:
   # 签名服务器配置
   signing:
     serverUrl: ""                                # 自定义签名服务器URL
-    signServer: "https://sign.lagrangecore.org"  # 默认签名服务器
-    serverTimeout: 60000
-    fallbackVersion: "3.2.15-30366"
+    proxyUrl: ""                                 # 代理服务器URL (可选)
+    musicSignServerUrl: ""                       # 音乐签名服务器URL (可选)
 
   # 日志配置
   logging:

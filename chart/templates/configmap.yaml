@@ -31,14 +31,15 @@ data:
       "QrCode": {
         "ConsoleCompatibilityMode": {{ .Values.config.qrCode.consoleCompatibilityMode }}
       },
-      "Signing": {
-        {{- if .Values.config.signing.serverUrl }}
-        "ServerUrl": {{ .Values.config.signing.serverUrl | quote }},
-        {{- end }}
-        "SignServer": {{ .Values.config.signing.signServer | quote }},
-        "ServerTimeout": {{ .Values.config.signing.serverTimeout }},
-        "FallbackVersion": {{ .Values.config.signing.fallbackVersion | quote }}
-      },
+      {{- if .Values.config.signing.serverUrl }}
+      "SignServerUrl": {{ .Values.config.signing.serverUrl | quote }},
+      {{- end }}
+      {{- if .Values.config.signing.proxyUrl }}
+      "SignProxyUrl": {{ .Values.config.signing.proxyUrl | quote }},
+      {{- end }}
+      {{- if .Values.config.signing.musicSignServerUrl }}
+      "MusicSignServerUrl": {{ .Values.config.signing.musicSignServerUrl | quote }},
+      {{- end }}
       "Implementations": [
         {{- range $index, $impl := .Values.config.implementations }}
         {{- if $index }},{{ end }}
