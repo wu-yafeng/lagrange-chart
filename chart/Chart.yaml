@@ -1,0 +1,19 @@
+apiVersion: v2
+name: lagrange-onebot
+description: A Helm chart for Lagrange.OneBot - An Implementation of NTQQ Protocol with Pure C#
+type: application
+version: 0.1.0
+appVersion: "edge"
+keywords:
+  - lagrange
+  - onebot
+  - qq
+  - qqbot
+  - ntqq
+  - chatbot
+home: https://github.com/LagrangeDev/Lagrange.Core
+sources:
+  - https://github.com/LagrangeDev/Lagrange.Core
+maintainers:
+  - name: lagrange-chart-maintainer
+    email: maintainer@example.com

@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lagrange-onebot.fullname" . }}-config
+  labels:
+    {{- include "lagrange-onebot.labels" . | nindent 4 }}
+data:
+  appsettings.json: |
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": {{ .Values.config.logging.logLevel | quote }},
+          "Microsoft": "Warning",
+          "Microsoft.Hosting.Lifetime": "Information"
+        },
+        "Console": {
+          "OutputTemplate": {{ .Values.config.logging.consoleOutputTemplate | quote }}
+        }
+      },
+      "Account": {
+        "Uin": {{ .Values.config.account.uin | quote }},
+        {{- if .Values.config.account.password }}
+        "Password": {{ .Values.config.account.password | quote }},
+        {{- end }}
+        "Protocol": {{ .Values.config.account.protocol | quote }},
+        "AutoReconnect": {{ .Values.config.account.autoReconnect }},
+        "UseIPv6Network": {{ .Values.config.account.useIPv6Network }},
+        "GetOptimumServer": {{ .Values.config.account.getOptimumServer }},
+        "AutoReLogin": {{ .Values.config.account.autoReLogin }}
+      },
+      "QrCode": {
+        "ConsoleCompatibilityMode": {{ .Values.config.qrCode.consoleCompatibilityMode }}
+      },
+      "Signing": {
+        {{- if .Values.config.signing.serverUrl }}
+        "ServerUrl": {{ .Values.config.signing.serverUrl | quote }},
+        {{- end }}
+        "SignServer": {{ .Values.config.signing.signServer | quote }},
+        "ServerTimeout": {{ .Values.config.signing.serverTimeout }},
+        "FallbackVersion": {{ .Values.config.signing.fallbackVersion | quote }}
+      },
+      "Implementations": [
+        {{- range $index, $impl := .Values.config.implementations }}
+        {{- if $index }},{{ end }}
+        {
+          "Type": {{ $impl.type | quote }},
+          "Host": {{ $impl.host | quote }},
+          "Port": {{ $impl.port }}
+          {{- if or $impl.accessToken $.Values.config.accessToken.autoGenerate }},
+          "AccessToken": {{ if $impl.accessToken }}{{ $impl.accessToken | quote }}{{ else }}{{ include "lagrange-onebot.accessToken" $ | quote }}{{ end }}
+          {{- end }}
+          {{- if $impl.heartBeatInterval }},
+          "HeartBeatInterval": {{ $impl.heartBeatInterval }}
+          {{- end }}
+          {{- if hasKey $impl "heartBeatEnable" }},
+          "HeartBeatEnable": {{ $impl.heartBeatEnable }}
+          {{- end }}
+          {{- if $impl.suffix }},
+          "Suffix": {{ $impl.suffix | quote }}
+          {{- end }}
+          {{- if $impl.secret }},
+          "Secret": {{ $impl.secret | quote }}
+          {{- end }}
+          {{- if $impl.apiSuffix }},
+          "ApiSuffix": {{ $impl.apiSuffix | quote }}
+          {{- end }}
+          {{- if $impl.eventSuffix }},
+          "EventSuffix": {{ $impl.eventSuffix | quote }}
+          {{- end }}
+          {{- if hasKey $impl "useUniversalClient" }},
+          "UseUniversalClient": {{ $impl.useUniversalClient }}
+          {{- end }}
+          {{- if $impl.reconnectInterval }},
+          "ReconnectInterval": {{ $impl.reconnectInterval }}
+          {{- end }}
+          {{- if hasKey $impl "ignoreSslCertificate" }},
+          "IgnoreSslCertificate": {{ $impl.ignoreSslCertificate }}
+          {{- end }}
+        }
+        {{- end }}
+      ]
+    }
