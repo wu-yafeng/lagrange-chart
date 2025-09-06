@@ -2,7 +2,6 @@ name: Release Charts
 
 env:
   HELM_VERSION: v3.13.0
-  CHART_NAME: lagrange-onebot
 on:
   push:
     branches:
@@ -36,7 +35,7 @@ jobs:
 
     - name: Update chart dependencies
       run: |
-        cd ${{ env.CHART_NAME }}
+        cd chart
         helm dependency update
 
     - name: Package chart
