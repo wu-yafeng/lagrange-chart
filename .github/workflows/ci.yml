@@ -1,8 +1,16 @@
 name: Release Charts
+
 env:
   HELM_VERSION: v3.13.0
   CHART_NAME: lagrange-onebot
-
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'chart/**'
+  workflow_dispatch:
+  
 jobs:
   package-and-publish:
     runs-on: ubuntu-latest
@@ -31,29 +39,23 @@ jobs:
         cd ${{ env.CHART_NAME }}
         helm dependency update
 
-    - name: Package Helm Chart
+    - name: Package chart
       run: |
-        helm package ./${{ env.CHART_NAME }} --destination ./packages
-        mkdir -p gh-pages
-        cp packages/*.tgz gh-pages/
+        helm package chart --destination charts/
 
     - name: Generate Helm repo index
       run: |
         cd gh-pages
-        helm repo index . --url https://github.com/wu-yafeng/lagrange-chart/releases/download/$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")/
+        helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: charts
 
     - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./gh-pages
-        force_orphan: true
-
-    - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: packages/*.tgz
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      id: deployment
+      uses: actions/deploy-pages@v4
