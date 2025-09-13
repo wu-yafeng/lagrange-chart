@@ -1,15 +1,17 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "lagrange-onebot.fullname" . }}
+  name: {{ include "lagrange-onebot.fullname" . }}-onebot
   labels:
     {{- include "lagrange-onebot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: onebot
 spec:
-  serviceName: {{ include "lagrange-onebot.fullname" . }}-headless
+  serviceName: {{ include "lagrange-onebot.fullname" . }}-onebot
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       {{- include "lagrange-onebot.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: onebot
   template:
     metadata:
       annotations:
@@ -19,6 +21,7 @@ spec:
         {{- end }}
       labels:
         {{- include "lagrange-onebot.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: onebot
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -39,12 +42,11 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
           ports:
-            - name: http
-              containerPort: {{ .Values.service.httpPort }}
+            {{- range $impl := .Values.config.implementations }}
+            - name: {{ $impl.type | lower }}
+              containerPort: {{ $impl.port }}
               protocol: TCP
-            - name: ws
-              containerPort: {{ .Values.service.wsPort }}
-              protocol: TCP
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
@@ -75,6 +77,7 @@ spec:
         name: data
         labels:
           {{- include "lagrange-onebot.labels" . | nindent 10 }}
+          app.kubernetes.io/component: onebot
       spec:
         accessModes:
           - {{ .Values.persistence.accessMode }}

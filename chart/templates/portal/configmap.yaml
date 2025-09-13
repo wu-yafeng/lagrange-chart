@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lagrange-onebot.fullname" . }}-portal-nginx
+  labels:
+    {{- include "lagrange-onebot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+data:
+  default.conf: |
+        resolver kube-dns.kube-system.svc.cluster.local valid=5s;
+        # 基于x-instance-id的map配置
+        # 将x-instance-id映射到对应的后端
+        map $http_x_instance_id $backend_pool {
+            {{- range $i := until (int .Values.replicaCount) }}
+            "{{ $i }}" {{ include "lagrange-onebot.fullname" $ }}-onebot-{{ $i }}.{{ include "lagrange-onebot.fullname" $ }}-onebot.{{ $.Release.Namespace }}.svc.cluster.local;
+            {{- end }}
+
+            default "";
+        }
+
+        map $http_x_instance_port $backend_port {
+            {{- range $impl := .Values.config.implementations }}
+            "{{ $impl.port }}" {{ $impl.port }};
+            {{- end }}
+
+            default {{ (index .Values.config.implementations 0).port }};
+        }
+        
+        server {
+            listen 80;
+            server_name _;
+
+            location /health {
+                return 200 'OK';
+                add_header Content-Type text/plain;
+            }
+            
+            location / {
+                default_type application/problem+json;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header X-Instance-ID $http_x_instance_id;
+                
+                proxy_connect_timeout 30s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+
+                if ($backend_pool = "") {
+                    return 400 '{
+                      "type": "https://$host/probs/invalid-instance-id",
+                      "title": "Bad Request",
+                      "status": 400,
+                      "detail": "Missing or invalid X-Instance-ID header"
+                    }';
+                }
+
+                if ($backend_port = "") {
+                    return 400 '{
+                      "type": "https://$host/probs/invalid-instance-port",
+                      "title": "Bad Request",
+                      "status": 400,
+                      "detail": "Missing or invalid X-Instance-Port header"
+                    }';
+                }
+                
+                proxy_pass http://$backend_pool:$backend_port;
+            }
+        }

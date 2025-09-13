@@ -5,19 +5,19 @@
   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
   {{- end }}
 {{- end }}
-{{- else if contains "NodePort" .Values.service.type }}
+{{- else if contains "NodePort" .Values.portal.service.type }}
   export NODE_PORT_HTTP=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "lagrange-onebot.fullname" . }})
   export NODE_PORT_WS=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[1].nodePort}" services {{ include "lagrange-onebot.fullname" . }})
   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
   echo "HTTP API: http://$NODE_IP:$NODE_PORT_HTTP"
   echo "WebSocket: ws://$NODE_IP:$NODE_PORT_WS"
-{{- else if contains "LoadBalancer" .Values.service.type }}
+{{- else if contains "LoadBalancer" .Values.portal.service.type }}
      NOTE: It may take a few minutes for the LoadBalancer IP to be available.
            You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "lagrange-onebot.fullname" . }}'
   export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "lagrange-onebot.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
-  echo "HTTP API: http://$SERVICE_IP:{{ .Values.service.httpPort }}"
-  echo "WebSocket: ws://$SERVICE_IP:{{ .Values.service.wsPort }}"
-{{- else if contains "ClusterIP" .Values.service.type }}
+  echo "HTTP API: http://$SERVICE_IP:{{ .Values.portal.service.httpPort }}"
+  echo "WebSocket: ws://$SERVICE_IP:{{ .Values.portal.service.wsPort }}"
+{{- else if contains "ClusterIP" .Values.portal.service.type }}
   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "{{ include "lagrange-onebot.selectorLabels" . }}" -o jsonpath="{.items[0].metadata.name}")
   export CONTAINER_PORT_HTTP=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
   export CONTAINER_PORT_WS=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[1].containerPort}")
@@ -39,8 +39,8 @@
 4. Configuration:
   - QQ UIN: {{ .Values.config.account.uin }}
   - Protocol: {{ .Values.config.account.protocol }}
-  - HTTP Port: {{ .Values.service.httpPort }}
-  - WebSocket Port: {{ .Values.service.wsPort }}
+  - HTTP Port: {{ .Values.portal.service.httpPort }}
+  - WebSocket Port: {{ .Values.portal.service.wsPort }}
 {{- if .Values.config.accessToken.autoGenerate }}
 
 5. Access Token:

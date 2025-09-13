@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lagrange-onebot.fullname" . }}-portal
+  labels:
+    {{- include "lagrange-onebot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+spec:
+  type: {{ .Values.portal.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.portal.service.port | default 80 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "lagrange-onebot.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: portal

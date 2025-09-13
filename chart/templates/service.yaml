@@ -1,19 +1,19 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "lagrange-onebot.fullname" . }}
+  name: {{ include "lagrange-onebot.fullname" . }}-onebot
   labels:
     {{- include "lagrange-onebot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: onebot
 spec:
-  type: {{ .Values.service.type }}
-  ports:
-    - port: {{ .Values.service.httpPort }}
-      targetPort: http
-      protocol: TCP
-      name: http
-    - port: {{ .Values.service.wsPort }}
-      targetPort: ws
-      protocol: TCP
-      name: ws
+  clusterIP: None
   selector:
     {{- include "lagrange-onebot.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: onebot
+  ports:
+    {{- range $impl := .Values.config.implementations }}
+    - port: {{ $impl.port }}
+      targetPort: {{ $impl.type | lower }}
+      protocol: TCP
+      name: {{ $impl.type | lower }}
+    {{- end }}

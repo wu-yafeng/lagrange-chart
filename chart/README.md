@@ -6,10 +6,12 @@
 
 - 使用 StatefulSet 部署，确保网络身份稳定和数据持久化
 - 支持自动生成访问令牌 (Access Token)
-- 支持多种 OneBot 实现（HTTP、WebSocket）
-- 灵活的配置选项
+- 支持多种 OneBot 实现（HTTP、WebSocket、反向WebSocket等）
+- 内置 Portal 反向代理，支持多实例路由和负载均衡
+- 灵活的配置选项和动态端口映射
 - 支持 Ingress 和多种 Service 类型
 - 可选的数据持久化
+- 基于实例 ID 的智能路由
 
 ## 前置要求
 
@@ -31,7 +33,7 @@ helm repo update
 ```bash
 # 克隆或下载 chart
 git clone <repository-url>
-cd lagrange-chart/lagrange-onebot
+cd lagrange-chart/chart
 
 # 安装 chart
 helm install my-lagrange-onebot . -n lagrange-system --create-namespace
@@ -98,11 +100,11 @@ config:
 config:
   implementations:
     - type: "Http"
-      host: "0.0.0.0"
+      host: "*"
       port: 8080
       # accessToken: "custom-token"  # 可选：为特定实现指定令牌
     - type: "ReverseWebSocket"
-      host: "0.0.0.0"
+      host: "*"
       port: 8081
       heartBeatInterval: 5000
       heartBeatEnable: true
@@ -118,18 +120,35 @@ persistence:
   size: 1Gi
 ```
 
-### 网络访问
-
-#### 使用 NodePort
+### Portal 反向代理配置
 
 ```yaml
-service:
-  type: NodePort
-  httpPort: 8080
-  wsPort: 8081
+portal:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
 ```
 
-#### 使用 Ingress
+### 网络访问
+
+#### 使用 NodePort（通过 Portal）
+
+```yaml
+portal:
+  service:
+    type: NodePort
+    port: 80
+```
+
+#### 使用 Ingress（通过 Portal）
 
 ```yaml
 ingress:
@@ -137,9 +156,6 @@ ingress:
   className: "nginx"
   hosts:
     - host: lagrange.example.com
-      paths:
-        - path: /
-          pathType: Prefix
   tls:
     - secretName: lagrange-tls
       hosts:
@@ -167,7 +183,7 @@ kubectl get svc -n lagrange-system
 ### 3. 查看二维码登录（如果使用二维码登录）
 
 ```bash
-kubectl logs -n lagrange-system -l app.kubernetes.io/name=lagrange-onebot -f
+kubectl logs -n lagrange-system -l app.kubernetes.io/name=lagrange-onebot,app.kubernetes.io/component=onebot -f
 ```
 
 ### 4. 获取自动生成的访问令牌
@@ -178,22 +194,30 @@ kubectl get secret -n lagrange-system my-lagrange-onebot-token -o jsonpath="{.da
 
 ### 5. 访问 API
 
-获取服务 URL：
+通过 Portal 访问 OneBot API。Portal 提供了基于实例 ID 的路由功能：
 
 ```bash
 # 如果使用 NodePort
 kubectl get svc -n lagrange-system
 
-# 如果使用端口转发
-kubectl port-forward -n lagrange-system svc/my-lagrange-onebot 8080:8080 8081:8081
+# 如果使用端口转发到 Portal
+kubectl port-forward -n lagrange-system svc/my-lagrange-onebot-portal 8080:80
 ```
 
-然后可以访问 OneBot API：
+然后可以通过 Portal 访问 OneBot API：
 
 ```bash
-# 获取机器人信息（替换 YOUR_TOKEN 为实际令牌）
-curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8080/get_login_info
+# 获取机器人信息（替换 YOUR_TOKEN 为实际令牌，指定实例 ID 和端口）
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     -H "X-Instance-ID: 0" \
+     -H "X-Instance-Port: 8080" \
+     http://localhost:8080/get_login_info
 ```
+
+**重要说明**：
+- `X-Instance-ID`：指定要访问的 StatefulSet 实例 ID（从 0 开始）
+- `X-Instance-Port`：指定要访问的端口（根据 OneBot 实现配置）
+- Portal 会根据这些头部信息将请求路由到正确的后端实例
 
 ## 升级
 
@@ -220,19 +244,40 @@ kubectl delete pvc -n lagrange-system -l app.kubernetes.io/name=lagrange-onebot
 ### 查看日志
 
 ```bash
-kubectl logs -n lagrange-system -l app.kubernetes.io/name=lagrange-onebot -f
+# 查看 OneBot 组件日志
+kubectl logs -n lagrange-system -l app.kubernetes.io/name=lagrange-onebot,app.kubernetes.io/component=onebot -f
+
+# 查看 Portal 组件日志
+kubectl logs -n lagrange-system -l app.kubernetes.io/name=lagrange-onebot,app.kubernetes.io/component=portal -f
 ```
 
 ### 查看配置
 
 ```bash
+# OneBot 配置
 kubectl get configmap -n lagrange-system my-lagrange-onebot-config -o yaml
+
+# Portal nginx 配置
+kubectl get configmap -n lagrange-system my-lagrange-onebot-portal-nginx -o yaml
 ```
 
 ### 检查网络
 
 ```bash
 kubectl get svc,ingress -n lagrange-system
+```
+
+### 检查组件状态
+
+```bash
+# 查看所有 Pods
+kubectl get pods -n lagrange-system
+
+# 查看 OneBot StatefulSet
+kubectl get statefulset -n lagrange-system
+
+# 查看 Portal Deployment
+kubectl get deployment -n lagrange-system
 ```
 
 ### 查看持久化存储

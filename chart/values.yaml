@@ -59,7 +59,7 @@ config:
   implementations:
     # HTTP服务
     - type: Http
-      host: "*"
+      host: "*" # 监听所有地址
       port: 8080
       accessToken: ""
 
@@ -110,13 +110,6 @@ podSecurityContext:
 securityContext:
   {}
 
-service:
-  type: ClusterIP
-  # HTTP服务端口
-  httpPort: 8080
-  # WebSocket端口
-  wsPort: 8081
-
 # 用于外部访问的Ingress配置
 ingress:
   enabled: false
@@ -125,12 +118,7 @@ ingress:
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: lagrange.local
-      paths:
-        - path: /
-          pathType: Prefix
-          # 可以指定后端服务端口: http 或 ws
-          backend: http
+  - host: onebot.local
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -157,3 +145,63 @@ persistence:
   storageClass: ""
   accessMode: ReadWriteOnce
   size: 1Gi
+
+# Portal 配置 (nginx:alpine)
+portal:
+  # 副本数量
+  replicaCount: 1
+  
+  # 镜像配置
+  image:
+    pullPolicy: IfNotPresent
+  
+  # 镜像拉取密钥
+  imagePullSecrets: []
+  
+  # Pod 注解
+  podAnnotations: {}
+  
+  # Pod 安全上下文
+  podSecurityContext:
+    {}
+    # fsGroup: 101  # nginx group
+  
+  # 容器安全上下文
+  securityContext:
+    {}
+    # runAsNonRoot: true
+    # runAsUser: 101  # nginx user
+    # allowPrivilegeEscalation: false
+    # capabilities:
+    #   drop:
+    #     - ALL
+    # readOnlyRootFilesystem: false
+  
+  # 资源限制
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
+  
+  # Service配置
+  service:
+    type: ClusterIP
+    port: 80
+  
+  # 卷挂载
+  volumeMounts: []
+  
+  # 卷
+  volumes: []
+  
+  # 节点选择器
+  nodeSelector: {}
+  
+  # 容忍度
+  tolerations: []
+  
+  # 亲和性
+  affinity: {}
